@@ -10,8 +10,9 @@ connectDB();
 const app = express();
 
 // Middlewares
+const allowedOrigin = process.env.FRONTEND_URL || '*';
 app.use(cors({
-  origin: '*', // For local development, allow all. In production, configure explicitly.
+  origin: allowedOrigin,
   credentials: true
 }));
 app.use(express.json());
@@ -23,20 +24,22 @@ app.use('/api/projects', require('./routes/projectRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 
 const path = require('path');
+const fs = require('fs');
 
-// Serve Frontend in Production mode
-if (process.env.NODE_ENV === 'production') {
+// Serve Frontend in Production mode if built locally
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+if (process.env.NODE_ENV === 'production' && fs.existsSync(frontendDistPath)) {
   // Set static build folder
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+  app.use(express.static(frontendDistPath));
 
   // Point all non-API GET requests to the index.html file
   app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend', 'dist', 'index.html'));
+    res.sendFile(path.resolve(frontendDistPath, 'index.html'));
   });
 } else {
-  // Welcome/Status endpoint in development
+  // Welcome/Status endpoint in development or if frontend dist doesn't exist
   app.get('/', (req, res) => {
-    res.json({ message: '🛰️ Synapse Task Manager API is running smoothly in development' });
+    res.json({ message: '🛰️ Synapse Task Manager API is running smoothly' });
   });
 }
 
