@@ -22,10 +22,23 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/projects', require('./routes/projectRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 
-// Welcome/Status endpoint
-app.get('/', (req, res) => {
-  res.json({ message: '🛰️ Synapse Task Manager API is running smoothly' });
-});
+const path = require('path');
+
+// Serve Frontend in Production mode
+if (process.env.NODE_ENV === 'production') {
+  // Set static build folder
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+  // Point all non-API GET requests to the index.html file
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../frontend', 'dist', 'index.html'));
+  });
+} else {
+  // Welcome/Status endpoint in development
+  app.get('/', (req, res) => {
+    res.json({ message: '🛰️ Synapse Task Manager API is running smoothly in development' });
+  });
+}
 
 // Error handling middlewares
 app.use(notFound);
