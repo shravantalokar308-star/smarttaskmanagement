@@ -20,15 +20,20 @@ const createTransporter = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
     },
+    tls: {
+      // Prevents connection rejection due to local TLS/SSL handshake variations
+      rejectUnauthorized: false,
+    },
   });
 };
+
+// Initialize transporter once globally to prevent socket exhaustion and Gmail connection throttling
+const transporter = createTransporter();
 
 /**
  * Sends a premium styled HTML email invitation to a team member
  */
 const sendProjectInvitationEmail = async ({ toEmail, toName, inviterName, projectName, projectId }) => {
-  const transporter = createTransporter();
-  
   // Dynamic frontend workspace link fallback to localhost:5173
   const workspaceUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/projects/${projectId}`;
 
@@ -140,7 +145,7 @@ const sendProjectInvitationEmail = async ({ toEmail, toName, inviterName, projec
             <p>
               Hello <span class="highlight">${toName}</span>,<br><br>
               You've been invited by <span class="highlight">${inviterName}</span> to join the 
-              <span class="highlight">"${projectName}"</span> project workspace on **Synapse**. 
+              <span class="highlight">"${projectName}"</span> project workspace on Synapse. 
               You can now collaborate, assign tasks, and track project velocities together!
             </p>
             
@@ -159,11 +164,14 @@ const sendProjectInvitationEmail = async ({ toEmail, toName, inviterName, projec
     </html>
   `;
 
-  // Standard mail options
+  // Dynamic from fallback strictly using the authenticated SMTP_USER to satisfy Gmail SPF policy
+  const senderAddress = process.env.SMTP_FROM || `"Synapse Workspace" <${process.env.SMTP_USER}>`;
+
+  // Clean, high-deliverability subject to prevent spam-folder placement
   const mailOptions = {
-    from: process.env.SMTP_FROM || '"Synapse Workspace" <no-reply@synapse.com>',
+    from: senderAddress,
     to: toEmail,
-    subject: `🌌 You've been invited to join the "${projectName}" workspace!`,
+    subject: `You've been invited to join the "${projectName}" workspace`,
     html: htmlContent,
   };
 
