@@ -164,8 +164,11 @@ const sendProjectInvitationEmail = async ({ toEmail, toName, inviterName, projec
     </html>
   `;
 
-  // Dynamic from fallback strictly using the authenticated SMTP_USER to satisfy Gmail SPF policy
-  const senderAddress = process.env.SMTP_FROM || `"Synapse Workspace" <${process.env.SMTP_USER}>`;
+  // Use SMTP_FROM if it matches the authenticated SMTP_USER, otherwise construct a sender address using the authenticated SMTP_USER to prevent Gmail SPF policy rejections.
+  let senderAddress = process.env.SMTP_FROM;
+  if (!senderAddress || (process.env.SMTP_USER && !senderAddress.includes(process.env.SMTP_USER))) {
+    senderAddress = `"Synapse Workspace" <${process.env.SMTP_USER}>`;
+  }
 
   // Clean, high-deliverability subject to prevent spam-folder placement
   const mailOptions = {
