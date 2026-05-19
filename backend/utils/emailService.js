@@ -210,7 +210,33 @@ const sendProjectInvitationEmail = async ({ toEmail, toName, inviterName, projec
     </html>
   `;
 
-  // 1. Prioritize Resend Web API if configured (avoids SMTP port blocks on Render free tier)
+  // 1. Prioritize Brevo Web API if configured (avoids SMTP port blocks on Render free tier)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const senderEmail = process.env.SMTP_USER || 'shravantalokar@gmail.com';
+      const res = await sendHttpsPost(
+        'https://api.brevo.com/v3/smtp/email',
+        { 'api-key': process.env.BREVO_API_KEY },
+        {
+          sender: { name: 'Synapse Workspace', email: senderEmail },
+          to: [{ email: toEmail, name: toName || toEmail }],
+          subject: `You've been invited to join the "${projectName}" workspace`,
+          htmlContent: htmlContent,
+        }
+      );
+
+      if (res.ok) {
+        console.log(`📧 Brevo: Project invitation email successfully sent to ${toEmail}: ${res.json.messageId}`);
+        return { success: true, messageId: res.json.messageId };
+      } else {
+        console.error('❌ Brevo API Error Response:', res.json);
+      }
+    } catch (error) {
+      console.error('❌ Failed to send Brevo invitation email:', error);
+    }
+  }
+
+  // 2. Prioritize Resend Web API if configured (avoids SMTP port blocks on Render free tier)
   if (process.env.RESEND_API_KEY) {
     try {
       // Note: Free Resend accounts without a custom verified domain can only send from onboarding@resend.dev

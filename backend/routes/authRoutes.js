@@ -57,7 +57,56 @@ const sendHttpsPost = (url, headers, body) => {
 };
 
 router.get('/test-email', async (req, res) => {
-  // 1. Test Resend first if configured (to bypass SMTP ports on Render free tier)
+  // 1. Test Brevo first if configured (to bypass SMTP ports on Render free tier)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const senderEmail = process.env.SMTP_USER || 'shravantalokar@gmail.com';
+      const response = await sendHttpsPost(
+        'https://api.brevo.com/v3/smtp/email',
+        { 'api-key': process.env.BREVO_API_KEY },
+        {
+          sender: { name: 'Synapse Test', email: senderEmail },
+          to: [{ email: senderEmail, name: 'Synapse Owner' }],
+          subject: 'Synapse Brevo API Connection Test',
+          htmlContent: '<p>If you receive this, your Brevo API configuration is working perfectly on Render!</p>',
+        }
+      );
+
+      if (response.ok) {
+        return res.json({
+          success: true,
+          message: 'Brevo API connection verified and test email sent successfully!',
+          messageId: response.json.messageId,
+          env: {
+            BREVO_API_KEY_SET: true,
+            BREVO_API_KEY_PREVIEW: process.env.BREVO_API_KEY.slice(0, 7) + '...',
+            SMTP_USER: senderEmail,
+          }
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          message: 'Brevo API test failed',
+          error: response.json,
+          env: {
+            BREVO_API_KEY_SET: true,
+            SMTP_USER: senderEmail,
+          }
+        });
+      }
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'Brevo API test threw exception',
+        error: error.message,
+        env: {
+          BREVO_API_KEY_SET: true,
+        }
+      });
+    }
+  }
+
+  // 2. Test Resend if configured (to bypass SMTP ports on Render free tier)
   if (process.env.RESEND_API_KEY) {
     try {
       const sender = process.env.RESEND_FROM || 'Synapse Workspace <onboarding@resend.dev>';
