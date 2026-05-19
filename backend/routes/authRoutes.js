@@ -61,26 +61,28 @@ router.get('/test-email', async (req, res) => {
   if (process.env.BREVO_API_KEY) {
     try {
       const senderEmail = process.env.SMTP_USER || 'shravantalokar@gmail.com';
+      const recipientEmail = req.query.to || senderEmail;
       const response = await sendHttpsPost(
         'https://api.brevo.com/v3/smtp/email',
         { 'api-key': process.env.BREVO_API_KEY },
         {
           sender: { name: 'Synapse Test', email: senderEmail },
-          to: [{ email: senderEmail, name: 'Synapse Owner' }],
+          to: [{ email: recipientEmail, name: 'Synapse Test Recipient' }],
           subject: 'Synapse Brevo API Connection Test',
-          htmlContent: '<p>If you receive this, your Brevo API configuration is working perfectly on Render!</p>',
+          htmlContent: `<p>If you receive this, your Brevo API configuration is working perfectly on Render! Recipient: ${recipientEmail}</p>`,
         }
       );
 
       if (response.ok) {
         return res.json({
           success: true,
-          message: 'Brevo API connection verified and test email sent successfully!',
+          message: `Brevo API connection verified and test email sent successfully to ${recipientEmail}!`,
           messageId: response.json.messageId,
           env: {
             BREVO_API_KEY_SET: true,
             BREVO_API_KEY_PREVIEW: process.env.BREVO_API_KEY.slice(0, 7) + '...',
             SMTP_USER: senderEmail,
+            TEST_RECIPIENT: recipientEmail,
           }
         });
       } else {
