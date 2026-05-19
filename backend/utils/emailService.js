@@ -20,6 +20,7 @@ const createTransporter = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
     },
+    family: 4, // Force IPv4 to prevent ENETUNREACH errors on cloud platforms without IPv6 support
     tls: {
       // Prevents connection rejection due to local TLS/SSL handshake variations
       rejectUnauthorized: false,

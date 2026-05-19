@@ -25,6 +25,7 @@ router.get('/test-email', async (req, res) => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
       },
+      family: 4, // Force IPv4 to prevent ENETUNREACH errors on cloud platforms without IPv6 support
       connectionTimeout: 5000, // 5 seconds
       greetingTimeout: 5000,
       socketTimeout: 5000,
