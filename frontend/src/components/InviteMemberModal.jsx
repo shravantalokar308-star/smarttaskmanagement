@@ -48,10 +48,15 @@ const InviteMemberModal = ({ isOpen, onClose, onInvite }) => {
         )}
 
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+          <label 
+            htmlFor="invite-member-email" 
+            className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+          >
             Registered User Email Address
           </label>
           <input
+            id="invite-member-email"
+            name="email"
             type="email"
             required
             value={email}
