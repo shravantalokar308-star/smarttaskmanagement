@@ -1,4 +1,45 @@
 const nodemailer = require('nodemailer');
+const https = require('https');
+
+// Helper to make HTTPS POST requests without external dependencies
+const sendHttpsPost = (url, headers, body) => {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const options = {
+      hostname: urlObj.hostname,
+      path: urlObj.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          resolve({
+            ok: res.statusCode >= 200 && res.statusCode < 300,
+            status: res.statusCode,
+            json: JSON.parse(data),
+          });
+        } catch (e) {
+          resolve({
+            ok: false,
+            status: res.statusCode,
+            json: { message: data },
+          });
+        }
+      });
+    });
+
+    req.on('error', (err) => reject(err));
+    req.write(JSON.stringify(body));
+    req.end();
+  });
+};
 
 // Create transporter only if keys are present in env
 const createTransporter = () => {
@@ -169,6 +210,34 @@ const sendProjectInvitationEmail = async ({ toEmail, toName, inviterName, projec
     </html>
   `;
 
+  // 1. Prioritize Resend Web API if configured (avoids SMTP port blocks on Render free tier)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      // Note: Free Resend accounts without a custom verified domain can only send from onboarding@resend.dev
+      const sender = process.env.RESEND_FROM || 'Synapse Workspace <onboarding@resend.dev>';
+      const res = await sendHttpsPost(
+        'https://api.resend.com/emails',
+        { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+        {
+          from: sender,
+          to: toEmail,
+          subject: `You've been invited to join the "${projectName}" workspace`,
+          html: htmlContent,
+        }
+      );
+
+      if (res.ok) {
+        console.log(`📧 Resend: Project invitation email successfully sent to ${toEmail}: ${res.json.id}`);
+        return { success: true, messageId: res.json.id };
+      } else {
+        console.error('❌ Resend API Error Response:', res.json);
+      }
+    } catch (error) {
+      console.error('❌ Failed to send Resend invitation email:', error);
+    }
+  }
+
+  // 2. Fallback to standard Nodemailer SMTP
   // Use SMTP_FROM if it matches the authenticated SMTP_USER, otherwise construct a sender address using the authenticated SMTP_USER to prevent Gmail SPF policy rejections.
   let senderAddress = process.env.SMTP_FROM;
   if (!senderAddress || (process.env.SMTP_USER && !senderAddress.includes(process.env.SMTP_USER))) {
