@@ -10,7 +10,12 @@ connectDB();
 const app = express();
 
 // Middlewares
-const allowedOrigin = process.env.FRONTEND_URL || '*';
+// Clean and sanitize the allowed CORS origin to remove any trailing slashes
+let allowedOrigin = process.env.FRONTEND_URL || '*';
+if (allowedOrigin && allowedOrigin !== '*' && allowedOrigin.endsWith('/')) {
+  allowedOrigin = allowedOrigin.slice(0, -1);
+}
+
 app.use(cors({
   origin: allowedOrigin,
   credentials: true

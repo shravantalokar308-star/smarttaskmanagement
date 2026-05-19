@@ -34,8 +34,12 @@ const transporter = createTransporter();
  * Sends a premium styled HTML email invitation to a team member
  */
 const sendProjectInvitationEmail = async ({ toEmail, toName, inviterName, projectName, projectId }) => {
-  // Dynamic frontend workspace link fallback to localhost:5173
-  const workspaceUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/projects/${projectId}`;
+  // Clean frontend workspace link and handle fallbacks safely
+  let cleanFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  if (cleanFrontendUrl.endsWith('/')) {
+    cleanFrontendUrl = cleanFrontendUrl.slice(0, -1);
+  }
+  const workspaceUrl = `${cleanFrontendUrl}/projects/${projectId}`;
 
   const htmlContent = `
     <!DOCTYPE html>
