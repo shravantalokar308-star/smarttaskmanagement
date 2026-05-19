@@ -13,6 +13,7 @@ router.post('/login', loginUser);
 router.post('/google', googleLogin);
 router.get('/me', protect, getMe);
 
+const nodemailer = require('nodemailer');
 const https = require('https');
 
 // Helper to make HTTPS POST requests for diagnostics
